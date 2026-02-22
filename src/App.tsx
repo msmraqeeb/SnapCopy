@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { Upload, Sparkles, Copy } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -16,7 +16,7 @@ const CopyToClipboard = ({ text, children }: { text: string; children: React.Rea
   return (
     <button
       onClick={handleCopy}
-      className="ml-2 p-1 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors duration-200"
+      className="ml-2 p-1 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors duration-200"
       title="Copy to clipboard"
     >
       <Copy size={16} />
@@ -27,8 +27,11 @@ const CopyToClipboard = ({ text, children }: { text: string; children: React.Rea
 export default function App() {
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
-  const [tags, setTags] = useState<string[]>([]);
+  const [shortDescription, setShortDescription] = useState<string>('');
+  const [longDescription, setLongDescription] = useState<string>('');
+  const [metaTitle, setMetaTitle] = useState<string>('');
+  const [metaDescription, setMetaDescription] = useState<string>('');
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,8 +51,11 @@ export default function App() {
 
     setLoading(true);
     setTitle('');
-    setDescription('');
-    setTags([]);
+    setShortDescription('');
+    setLongDescription('');
+    setMetaTitle('');
+    setMetaDescription('');
+    setKeywords([]);
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -67,7 +73,7 @@ export default function App() {
               },
             },
             {
-              text: "You are an expert e-commerce copywriter. Analyze the provided product image. Generate a catchy product title, a compelling 3-4 sentence description highlighting the style, and 5 SEO-friendly tags. Return the response ONLY in valid JSON format like this: { 'title': '...', 'description': '...', 'tags': ['...', '...'] }",
+              text: "You are an expert e-commerce copywriter and SEO specialist. Analyze the provided product image. Generate:\n1. A catchy product title\n2. A 1-2 sentence short description\n3. A detailed long description (2-3 paragraphs separated by \\n\\n)\n4. A SEO Meta Title (max 60 characters)\n5. A SEO Meta Description (max 160 characters)\n6. 5-7 SEO Keywords as an array of strings\nReturn the response ONLY in valid JSON format like this: { 'title': '...', 'shortDescription': '...', 'longDescription': '...', 'metaTitle': '...', 'metaDescription': '...', 'keywords': ['...', '...'] }",
             },
           ],
         },
@@ -78,27 +84,41 @@ export default function App() {
 
       const jsonResponse = JSON.parse(response.text.trim());
       setTitle(jsonResponse.title);
-      setDescription(jsonResponse.description);
-      setTags(jsonResponse.tags);
-    } catch (error) {
+      setShortDescription(jsonResponse.shortDescription);
+      setLongDescription(jsonResponse.longDescription);
+      setMetaTitle(jsonResponse.metaTitle);
+      setMetaDescription(jsonResponse.metaDescription);
+      setKeywords(jsonResponse.keywords);
+    } catch (error: any) {
       console.error('Error generating copy:', error);
-      alert('Failed to generate copy. Please try again.');
+      alert(`Failed to generate copy: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-between p-4 md:p-8">
+      {/* Main Header */}
+      <div className="w-full max-w-[1400px] flex flex-col items-center text-center mt-4 mb-8">
+        <h1 className="text-5xl font-extrabold text-white tracking-tight leading-tight flex items-center justify-center gap-3">
+          <Sparkles className="text-green-600" size={40} />
+          SnapCopy
+        </h1>
+        <p className="text-gray-400 text-lg mt-3">
+          AI-powered e-commerce copywriter & SEO optimization tool.
+        </p>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white shadow-2xl rounded-3xl p-8 max-w-5xl w-full border border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-8"
+        className="bg-gray-900 shadow-2xl rounded-3xl p-8 max-w-[1400px] w-full border border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-8"
       >
-        {/* Left Column: Image Upload */}
+        {/* Column 1: Image Upload */}
         <div className="flex flex-col items-center space-y-6">
-          <h2 className="text-2xl font-bold text-gray-800">Upload Product Image</h2>
+          <h2 className="text-2xl font-bold text-gray-100">Upload Product Image</h2>
           <input
             type="file"
             accept="image/*"
@@ -107,13 +127,14 @@ export default function App() {
             className="hidden"
           />
           <div
-            className="w-full max-w-md h-80 border-4 border-dashed border-indigo-300 rounded-xl flex items-center justify-center cursor-pointer hover:border-indigo-500 transition-all duration-300 relative overflow-hidden"
+            className="w-full border-4 border-dashed border-green-500/50 rounded-xl flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-300 relative overflow-hidden bg-black/50"
+            style={{ minHeight: '20rem' }}
             onClick={() => fileInputRef.current?.click()}
           >
             {image ? (
-              <img src={image} alt="Product Preview" className="w-full h-full object-cover" />
+              <img src={image} alt="Product Preview" className="w-full h-auto max-h-[80vh] object-contain" />
             ) : (
-              <div className="flex flex-col items-center text-indigo-500">
+              <div className="flex flex-col items-center text-green-500">
                 <Upload size={48} />
                 <span className="mt-2 text-lg font-medium">Drag & Drop or Click to Upload</span>
               </div>
@@ -123,7 +144,7 @@ export default function App() {
           <button
             onClick={handleGenerateCopy}
             disabled={!image || loading}
-            className="flex items-center space-x-2 px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 px-8 py-3 bg-black text-white font-semibold rounded-full shadow-lg hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -137,16 +158,16 @@ export default function App() {
           </button>
         </div>
 
-        {/* Right Column: Generated Content */}
+        {/* Column 2: Product Copy */}
         <div className="flex flex-col space-y-6">
-          <h1 className="text-4xl font-extrabold text-center text-gray-900 tracking-tight leading-tight mb-4 md:mb-0">
-            E-commerce Copywriter
-          </h1>
-          <p className="text-center text-gray-600 text-lg mb-8 md:mb-0">
+          <h2 className="text-4xl font-extrabold text-center text-white tracking-tight leading-tight mb-4 md:mb-0">
+            Product Details
+          </h2>
+          <p className="text-center text-gray-400 text-lg mb-8 md:mb-0">
             Your AI-generated product copy will appear here.
           </p>
 
-          {(title || description || tags.length > 0) && (
+          {(title || shortDescription || longDescription) && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -154,38 +175,101 @@ export default function App() {
               className="space-y-6"
             >
               {title && (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-xl font-bold text-gray-800">Product Title:</h2>
+                    <h2 className="text-xl font-bold text-gray-100">Product Title:</h2>
                     <CopyToClipboard text={title}><Copy size={16} /></CopyToClipboard>
                   </div>
-                  <p className="text-lg text-gray-700">{title}</p>
+                  <p className="text-lg text-gray-300">{title}</p>
                 </div>
               )}
 
-              {description && (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              {shortDescription && (
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-xl font-bold text-gray-800">Description:</h2>
-                    <CopyToClipboard text={description}><Copy size={16} /></CopyToClipboard>
+                    <h2 className="text-xl font-bold text-gray-100">Short Description:</h2>
+                    <CopyToClipboard text={shortDescription}><Copy size={16} /></CopyToClipboard>
                   </div>
-                  <p className="text-base text-gray-700 leading-relaxed">{description}</p>
+                  <p className="text-base text-gray-300 leading-relaxed">{shortDescription}</p>
                 </div>
               )}
 
-              {tags.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              {longDescription && (
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-xl font-bold text-gray-800">SEO Tags:</h2>
-                    <CopyToClipboard text={tags.join(', ')}><Copy size={16} /></CopyToClipboard>
+                    <h2 className="text-xl font-bold text-gray-100">Long Description:</h2>
+                    <CopyToClipboard text={longDescription}><Copy size={16} /></CopyToClipboard>
+                  </div>
+                  <div className="text-base text-gray-300 leading-relaxed space-y-4">
+                    {longDescription.split('\n\n').map((paragraph, index) => (
+                      <p key={index}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+
+        {/* Column 3: SEO Metadata */}
+        <div className="flex flex-col space-y-6">
+          <h2 className="text-4xl font-extrabold text-center text-white tracking-tight leading-tight mb-4 md:mb-0">
+            SEO Tags
+          </h2>
+          <p className="text-center text-gray-400 text-lg mb-8 md:mb-0">
+            Optimized metadata for search engines.
+          </p>
+
+          {(metaTitle || metaDescription || keywords.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="space-y-6"
+            >
+              {metaTitle && (
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-xl font-bold text-gray-100">Meta Title:</h2>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${metaTitle.length > 60 ? 'text-red-400' : 'text-green-500'}`}>
+                        {metaTitle.length}/60
+                      </span>
+                      <CopyToClipboard text={metaTitle}><Copy size={16} /></CopyToClipboard>
+                    </div>
+                  </div>
+                  <p className="text-lg text-gray-300">{metaTitle}</p>
+                </div>
+              )}
+
+              {metaDescription && (
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-xl font-bold text-gray-100">Meta Description:</h2>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${metaDescription.length > 160 ? 'text-red-400' : 'text-green-500'}`}>
+                        {metaDescription.length}/160
+                      </span>
+                      <CopyToClipboard text={metaDescription}><Copy size={16} /></CopyToClipboard>
+                    </div>
+                  </div>
+                  <p className="text-base text-gray-300 leading-relaxed">{metaDescription}</p>
+                </div>
+              )}
+
+              {keywords.length > 0 && (
+                <div className="bg-black p-4 rounded-lg border border-gray-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-xl font-bold text-gray-100">Keywords:</h2>
+                    <CopyToClipboard text={keywords.join(', ')}><Copy size={16} /></CopyToClipboard>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {tags.map((tag, index) => (
+                    {keywords.map((keyword, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium"
+                        className="px-3 py-1 bg-green-900/40 text-green-400 border border-green-800/50 rounded-full text-sm font-medium"
                       >
-                        {tag}
+                        {keyword}
                       </span>
                     ))}
                   </div>
@@ -195,6 +279,23 @@ export default function App() {
           )}
         </div>
       </motion.div>
+
+      {/* Footer */}
+      <footer className="mt-auto pt-12 pb-4 w-full text-center text-gray-500 text-sm flex flex-row items-center justify-center space-x-2">
+        <span>&copy; {new Date().getFullYear()} SnapCopy. All Rights Reserved.</span>
+        <span className="text-gray-600">|</span>
+        <span>
+          Developed by:{' '}
+          <a
+            href="https://shakilmahmud.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-green-500 hover:text-green-400 font-medium transition-colors duration-200 hover:underline"
+          >
+            Shakil Mahmud
+          </a>
+        </span>
+      </footer>
     </div>
   );
 }
