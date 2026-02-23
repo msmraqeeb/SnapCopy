@@ -5,6 +5,7 @@
 
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
+import Groq from 'groq-sdk';
 import { Upload, Sparkles, Copy } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -58,11 +59,12 @@ export default function App() {
     setKeywords([]);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const base64Data = image.split(',')[1];
       const mimeType = image.split(';')[0].split(':')[1];
 
-      const response: GenerateContentResponse = await ai.models.generateContent({
+      // 1. Get image description from Gemini
+      const geminiResponse: GenerateContentResponse = await gemini.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: {
           parts: [
@@ -73,16 +75,31 @@ export default function App() {
               },
             },
             {
-              text: "You are an expert e-commerce copywriter and SEO specialist. Analyze the provided product image. Generate:\n1. A catchy product title\n2. A 1-2 sentence short description\n3. A detailed long description (2-3 paragraphs separated by \\n\\n)\n4. A SEO Meta Title (max 60 characters)\n5. A SEO Meta Description (max 160 characters)\n6. 5-7 SEO Keywords as an array of strings\nReturn the response ONLY in valid JSON format like this: { 'title': '...', 'shortDescription': '...', 'longDescription': '...', 'metaTitle': '...', 'metaDescription': '...', 'keywords': ['...', '...'] }",
+              text: "Describe this product image in high detail. Mention all visible features, colors, the style, and the target audience.",
             },
           ],
         },
-        config: {
-          responseMimeType: 'application/json',
-        },
       });
 
-      const jsonResponse = JSON.parse(response.text.trim());
+      const imageDescription = geminiResponse.text;
+
+      // 2. Generate E-commerce Copy via Groq using the description
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, dangerouslyAllowBrowser: true });
+      const prompt = `You are an expert e-commerce copywriter and SEO specialist. Analyze the following product description. Generate:\n1. A catchy product title\n2. A 1-2 sentence short description\n3. A detailed long description (2-3 paragraphs separated by \\n\\n)\n4. A SEO Meta Title (max 60 characters)\n5. A SEO Meta Description (max 160 characters)\n6. 5-7 SEO Keywords as an array of strings\n\nProduct Description:\n${imageDescription}\n\nReturn the response ONLY in valid JSON format like this: { "title": "...", "shortDescription": "...", "longDescription": "...", "metaTitle": "...", "metaDescription": "...", "keywords": ["...", "..."] }`;
+
+      const groqResponse = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' },
+      });
+
+      const textResponse = groqResponse.choices[0]?.message?.content || '{}';
+      const jsonResponse = JSON.parse(textResponse.trim());
       setTitle(jsonResponse.title);
       setShortDescription(jsonResponse.shortDescription);
       setLongDescription(jsonResponse.longDescription);
@@ -101,10 +118,11 @@ export default function App() {
     <div className="min-h-screen bg-black flex flex-col items-center justify-between p-4 md:p-8">
       {/* Main Header */}
       <div className="w-full max-w-[1400px] flex flex-col items-center text-center mt-4 mb-8">
-        <h1 className="text-5xl font-extrabold text-white tracking-tight leading-tight flex items-center justify-center gap-3">
-          <Sparkles className="text-green-600" size={40} />
-          SnapCopy
-        </h1>
+        <img
+          src="/images/snapcopy-logo.png"
+          alt="SnapCopy Logo"
+          className="h-16 md:h-20 object-contain"
+        />
         <p className="text-gray-400 text-lg mt-3">
           AI-powered e-commerce copywriter & SEO optimization tool.
         </p>
