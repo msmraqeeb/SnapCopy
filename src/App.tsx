@@ -124,7 +124,7 @@ export default function App() {
           className="h-16 md:h-20 object-contain"
         />
         <p className="text-gray-400 text-lg mt-3">
-          AI-powered e-commerce copywriter & SEO optimization tool.
+          E-commerce copywriter & SEO optimization tool.
         </p>
       </div>
 
@@ -170,9 +170,9 @@ export default function App() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : (
-              <Sparkles size={20} />
+              <img src="/images/snapsave-fav.png" alt="Generate Icon" className="w-5 h-5" />
             )}
-            <span>{loading ? 'Generating...' : 'Generate Copy'}</span>
+            <span>{loading ? 'Generating...' : 'Generate Details'}</span>
           </button>
         </div>
 
@@ -182,7 +182,7 @@ export default function App() {
             Product Details
           </h2>
           <p className="text-center text-gray-400 text-lg mb-8 md:mb-0">
-            Your AI-generated product copy will appear here.
+            Your product details will appear here.
           </p>
 
           {(title || shortDescription || longDescription) && (
