@@ -1,0 +1,17 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # এটি প্রতিদিন বাংলাদেশ সময় ভোর ৬টায় রান হবে (UTC 00:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # হাত দিয়ে রান করার অপশনও থাকবে
+
+jobs:
+  ping_supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Request to Supabase
+        run: |
+          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/test?select=*" \
+          -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}"

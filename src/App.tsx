@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import Groq from 'groq-sdk';
 import { Upload, Sparkles, Copy } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -59,41 +58,28 @@ export default function App() {
     setKeywords([]);
 
     try {
-      const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, dangerouslyAllowBrowser: true });
       const base64Data = image.split(',')[1];
       const mimeType = image.split(';')[0].split(':')[1];
 
-      // 1. Get image description from Gemini
-      const geminiResponse: GenerateContentResponse = await gemini.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType,
-              },
-            },
-            {
-              text: "Describe this product image in high detail. Mention all visible features, colors, the style, and the target audience.",
-            },
-          ],
-        },
-      });
-
-      const imageDescription = geminiResponse.text;
-
-      // 2. Generate E-commerce Copy via Groq using the description
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, dangerouslyAllowBrowser: true });
-      const prompt = `You are an expert e-commerce copywriter and SEO specialist. Analyze the following product description. Generate:\n1. A catchy product title\n2. A 1-2 sentence short description\n3. A detailed long description (2-3 paragraphs separated by \\n\\n)\n4. A SEO Meta Title (max 60 characters)\n5. A SEO Meta Description (max 160 characters)\n6. 5-7 SEO Keywords as an array of strings\n\nProduct Description:\n${imageDescription}\n\nReturn the response ONLY in valid JSON format like this: { "title": "...", "shortDescription": "...", "longDescription": "...", "metaTitle": "...", "metaDescription": "...", "keywords": ["...", "..."] }`;
+      // Use Groq Vision model to analyze the image and generate the copy in one step
+      const prompt = `You are an expert e-commerce copywriter and SEO specialist. Analyze the attached product image. Generate:\n1. A catchy product title\n2. A 1-2 sentence short description\n3. A detailed long description (2-3 paragraphs separated by \\n\\n)\n4. A SEO Meta Title (max 60 characters)\n5. A SEO Meta Description (max 160 characters)\n6. 5-7 SEO Keywords as an array of strings\n\nReturn the response ONLY in valid JSON format like this: { "title": "...", "shortDescription": "...", "longDescription": "...", "metaTitle": "...", "metaDescription": "...", "keywords": ["...", "..."] }`;
 
       const groqResponse = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: [
           {
             role: 'user',
-            content: prompt
-          }
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Data}`,
+                },
+              },
+            ],
+          },
         ],
         response_format: { type: 'json_object' },
       });
